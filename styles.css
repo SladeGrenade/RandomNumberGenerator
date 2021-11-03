@@ -7,6 +7,8 @@ html{
 
 body{
       overflow-x:hidden;
+      height: 100%;
+      margin:0px;
 }
 hr {
     border: 0;
@@ -35,8 +37,8 @@ font-size: 2rem;
 
 .Generator{
   position: relative;
-  height: 100vh;
   width: 100vw;
+  padding-bottom: 50px;
   text-align: center;
   justify-content: center;
 }
@@ -61,15 +63,20 @@ font-size: 2rem;
 }
 .info{
   margin:0px;
-  padding-top: 0px;
+  padding-top: 100px;
   font-family: "Montserrat",sans-serif;
   font-size: 1rem;
   color: white;
 }
 
 #Text{
-  font-family: serif;
   font-size: 3rem;
+    font-family: "Montserrat",sans-serif;
+  color: white;
+}
+#Text1{
+  font-size: 3rem;
+    font-family: "Montserrat",sans-serif;
   color: white;
 }
 .gen{

@@ -5,13 +5,21 @@ var inputmax = 0;
 
 function myFunction() {
   inputmax = document.getElementById("maxvalue").value;
-  number = Math.floor(Math.random()*inputmax);
+  number = Math.floor(Math.random()*(inputmax+1));
   document.getElementById("Text").innerHTML = number;
 
 
 }
 
-
+function generatePassword() {
+    var length = 8,
+        charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*",
+        retVal = "";
+    for (var i = 0, n = charset.length; i < length; ++i) {
+        retVal += charset.charAt(Math.floor(Math.random() * n));
+    }
+    document.getElementById("Text1").innerHTML = retVal;
+}
 
 
 
