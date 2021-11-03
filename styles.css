@@ -1,0 +1,100 @@
+html{
+  background-color: #1A1E1F;
+  margin: 0;
+  /* background-image: url("back7.png"); */
+    overflow-x:hidden;
+}
+
+body{
+      overflow-x:hidden;
+}
+hr {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0));
+}
+
+input[type=number]{
+  background-color: white;
+color: #1A1E1F;
+height: 50px;
+width: 500px;
+font-size: 2rem;
+}
+
+
+@media (max-width: 800px) {
+  input[type=number]{
+    background-color: white;
+  color: #1A1E1F;
+  height: 50px;
+  width: 80%;
+  font-size: 2rem;
+  }
+}
+
+.Generator{
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  text-align: center;
+  justify-content: center;
+}
+.textabove{
+  font-family: "Montserrat",sans-serif;
+  font-size: 3rem;
+  color: white;
+}
+
+
+.text1{
+  margin: 0px;
+  font-family: "Montserrat",sans-serif;
+  font-size: 3rem;
+  color: white;
+}
+.text2{
+  margin: 0px;
+  font-family: "Montserrat",sans-serif;
+  font-size: 1rem;
+  color: white;
+}
+.info{
+  margin:0px;
+  padding-top: 0px;
+  font-family: "Montserrat",sans-serif;
+  font-size: 1rem;
+  color: white;
+}
+
+#Text{
+  font-family: serif;
+  font-size: 3rem;
+  color: white;
+}
+.gen{
+  position:relative;
+  top:50%;
+  transform: translate(0,-50%);
+  margin:0px;
+  padding:0px;
+  font-family: "Montserrat",sans-serif;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+#button{
+  position: relative;
+  height: 40px;
+  width: 150px;
+  margin: 0 auto 0 auto;
+  text-align:center;
+  justify-content: center;
+  border-radius: 100px;
+  border-color: white;
+  background-color: white;
+   transition: transform .2s;
+}
+#button:hover{
+  transform: scale(1.3);
+}
