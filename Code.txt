@@ -1,0 +1,2608 @@
+#include <SPI.h>
+#include <TFT_ST7735.h>
+#include "_fonts/arial20.c";
+#include "_fonts/orbitron14.c";
+#include "_fonts/arial10.c"
+#include <stdio.h>
+#include <stdlib.h>
+#include "BluetoothSerial.h"
+
+
+//DEFINE VARIABLES
+#define DELAY_BETWEEN 500
+#define __CS   5
+#define __DC  2
+#define __RST 4
+#define inputCLK 16
+#define inputDT 17
+
+
+    #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+    #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+    #endif
+    BluetoothSerial SerialBT;
+
+
+TFT_ST7735 tft = TFT_ST7735(__CS, __DC,__RST);
+
+//PIN CONFIGURATIONS FOR PERIPHALS 
+const int potHori = 35;
+const int potVert = 34;
+const int motorPin = 3;
+
+int ButtonOn = 33;
+int infoButton = 39;
+
+
+
+//USER DEFINED VARIABLES
+//screen libary
+unsigned long start = 0;
+unsigned long t_end = 0;
+int rot = 0;
+
+//initial startup
+unsigned int startUp = 1;
+unsigned int menuSelection1 = 0;
+unsigned int menuSelection2 = 0;
+unsigned int Pendulum = 0;
+unsigned int Buttons = 0;
+unsigned int Bitmap = 0;
+unsigned int Randomwalk = 0;
+unsigned int Numbers = 0;
+unsigned int Bitvalue = 0;
+unsigned int Randomvalue = 0;
+unsigned int Pseudo = 0;
+
+unsigned int Bitcounter = 0;
+unsigned int PrevBitvalue = 0;
+
+char binary[] = "0000000000";
+unsigned int Bincounter = 0;
+int Binnumber = 0;
+char * pEnd;
+unsigned int Decimal = 1;
+
+signed int BitX = 0;
+signed int BitRow = 0;
+
+
+//BLUETOOTH VALUES
+unsigned int BluetoothOn = 0;
+unsigned int BluetoothInit = 0;
+char Codeinput;
+unsigned int Bluecounter = 0;
+
+//pot values
+int valueHori = 0;
+int valueVert = 0;
+
+//selectionMenu
+unsigned int itemNumber = 1;
+unsigned int itemNumberSub = 1;
+unsigned int movedawayVert = 0;
+unsigned int movedawayHori = 0;
+unsigned int secondMenu = 0;
+
+//ADC Noise
+int ButtonLarge = 32;
+int ButtonSmall = 26;
+
+unsigned int graphValue = 0;
+float graphhold = 0;
+long int graphMove = 3000;
+int graphlong = 150;
+int graph[160] = {0};
+int ButtonUp = 33;
+int ButtonDown = 39;
+const int ADCNoise = 15;
+unsigned int ADCmenu = 0;
+unsigned int ADC = 0;
+unsigned int ADCgraph = 0;
+int previousValue = 0;
+int currentValue = 0;
+unsigned int prevBit = 0;
+
+
+
+
+//Encoder values
+int counter = 0; 
+int abscounter = 0;
+int currentStateCLK;
+int previousStateCLK; 
+int change = 0;
+volatile int readValue = 0;
+
+
+//Button values and code
+const int button1 = 14;
+const int button2 = 12;
+const int button3 = 13;
+const int button4 = 25;
+const int button5 = 26;
+const int button6 = 27;
+const int button7 = 39;
+const int button8 = 32;
+const int button9 = 33;
+
+int value1 = 0;
+int value2 = 0;
+int value3 = 0;
+int value4 = 0;
+int value5 = 0;
+int value6 = 0;
+int value7 = 0;
+int value8 = 0;
+int value9 = 0;
+
+int StartOne = 0;
+
+
+//THIS IS THE FUNCITON TO SET FLAG WHEN TIMER REACHES VALUE
+hw_timer_t * timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+void IRAM_ATTR onTimer() {
+  portENTER_CRITICAL_ISR(&timerMux);
+  readValue = 1;
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
+
+
+unsigned int info = 1;
+
+
+
+
+
+void setup() {
+  // put your setup code here, to run once:
+    Serial.begin(115200);
+  start = millis ();
+  while (!Serial && ((millis () - start) <= 5000)) ;
+  tft.begin();
+
+pinMode (inputCLK,INPUT);
+pinMode (inputDT,INPUT);
+pinMode(motorPin, OUTPUT);
+   
+previousStateCLK = digitalRead(inputCLK);
+timer = timerBegin(0, 80000, true);
+timerAttachInterrupt(timer, &onTimer, true);
+timerAlarmWrite(timer, 300, true);
+timerAlarmEnable(timer);
+
+pinMode(button1,INPUT);
+pinMode(button2,INPUT);
+pinMode(button3,INPUT);
+pinMode(button4,INPUT);
+pinMode(button5,INPUT);
+pinMode(button6,INPUT);
+pinMode(button7,INPUT);
+pinMode(button8,INPUT);
+pinMode(button9,INPUT);
+
+SerialBT.begin("ESP32test"); //Bluetooth device name
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+if (startUp == 1) {
+  tft.fillScreen(0x39E7);
+  tft.setRotation(3);
+  tft.setTextColor(0xFFFF);
+  tft.setFont(&orbitron14);
+  tft.setTextScale(1);
+  tft.println(" ");
+  tft.println(" ");
+  tft.println("RANDOM");
+  tft.println("NUMBER");
+  tft.println("GENERATOR");
+  delay(3000);
+   for(unsigned int i = 0; i<140; i++){
+  tft.setCursor(0,0);
+  tft.fillRect(10,100,i,10,0xFFFF);
+  delay(10);
+   }
+  
+  resetScreen();
+  tft.setCursor(50,30);
+  tft.println("Michael");
+    tft.setCursor(40,50);
+  tft.println("Slade de");
+    tft.setCursor(50,70);
+  tft.println("Lange");
+  delay(3000);
+  tft.clearScreen();
+  tft.fillScreen(0x39E7);
+  startUp = 0;
+  menuSelection1 = 1;
+  menuListUpdate();
+}
+
+
+
+
+
+//                                   ___ ___   ____  ____  ____       ___ ___    ___  ____   __ __ 
+//                                  |   |   | /    ||    ||    \     |   |   |  /  _]|    \ |  |  |
+//                                  | _   _ ||  o  | |  | |  _  |    | _   _ | /  [_ |  _  ||  |  |
+//                                  |  \_/  ||     | |  | |  |  |    |  \_/  ||    _]|  |  ||  |  |
+//                                  |   |   ||  _  | |  | |  |  |    |   |   ||   [_ |  |  ||  :  |
+//                                  |   |   ||  |  | |  | |  |  |    |   |   ||     ||  |  ||     |
+//                                  |___|___||__|__||____||__|__|    |___|___||_____||__|__| \__,_|
+                                                               
+
+//Selection - main menu - (1)
+
+while (menuSelection1 ==1){
+ valueVert = analogRead(potVert);
+ valueHori = analogRead(potHori);
+ if(valueVert == 4095 && movedawayVert ==1){
+  if(itemNumber<5){
+    itemNumber += 1;
+    movedawayVert = 0;
+    resetMenu();
+    menuListUpdate();
+  }  
+ }
+ else if(valueVert == 0 && movedawayVert ==1){
+  if(itemNumber>1){
+    itemNumber -= 1;
+    movedawayVert = 0;
+    resetMenu();
+    menuListUpdate();
+   
+  }
+ }
+ else if(valueVert < 2000 && valueVert > 1700){
+  movedawayVert = 1;
+ }
+
+ if(valueHori == 4095 && movedawayHori==1){
+    movedawayHori = 0;
+    movedawayVert = 0;
+    menuSelection1 = 0;
+    menuSelection2 = 1;
+    resetScreen();
+    itemNumberSub = 1;
+    if(itemNumber==1){
+      Pendulum = 1;
+      menuSub();
+    }
+    else if(itemNumber==2){
+      Buttons = 1;
+      menuSub();
+    }
+    else if(itemNumber == 3){
+      Pseudo = 1;
+      menuSub();
+    }
+    else if(itemNumber == 4){
+      BluetoothOn = 1;
+      menuSelection2 = 0;
+    }
+    else if(itemNumber == 5){
+      ADCmenu = 1;
+      menuSelection2 = 0;
+          ADCmenufun();
+    }
+
+     
+ }
+  else if(valueHori < 2000){
+  movedawayHori = 1;
+ }
+
+}//END WHILE SELECTIONONR
+
+//                                         ___ ___    ___  ____   __ __  ______  __    __   ___  
+//                                        |   |   |  /  _]|    \ |  |  ||      ||  |__|  | /   \ 
+//                                        | _   _ | /  [_ |  _  ||  |  ||      ||  |  |  ||     |
+//                                        |  \_/  ||    _]|  |  ||  |  ||_|  |_||  |  |  ||  O  |
+//                                        |   |   ||   [_ |  |  ||  :  |  |  |  |  `  '  ||     |
+//                                        |   |   ||     ||  |  ||     |  |  |   \      / |     |
+//                                        |___|___||_____||__|__| \__,_|  |__|    \_/\_/   \___/ 
+//                                                                                               
+//                                                                                                  
+                                                                                          
+
+
+while(menuSelection2==1){
+ valueVert = analogRead(potVert);
+  valueHori = analogRead(potHori);
+ if(valueVert == 4095 && movedawayVert ==1){
+  if(itemNumberSub<3){
+    itemNumberSub += 1;
+    movedawayVert = 0;
+    resetMenu();
+    menuSub();
+  }  
+ }
+ else if(valueVert == 0 && movedawayVert ==1){
+  if(itemNumberSub>1){
+    itemNumberSub -= 1;
+    movedawayVert = 0;
+    resetMenu();
+    menuSub();
+   
+  }
+ }
+ else if(valueVert < 2000 && valueVert > 1700){
+  movedawayVert = 1;
+ }
+
+ if(valueHori == 4095 && movedawayHori==1){
+    movedawayHori = 0;
+    movedawayVert = 0;
+    menuSelection1 = 0;
+    menuSelection2 = 0;
+    resetScreen();
+        
+    if(itemNumberSub==1){
+    Numbers = 1;
+    Bincounter = 0;
+      
+    }
+    else if(itemNumberSub==2){
+      Bitmap = 1;
+      BitX = 0;
+      BitRow=0;
+    }
+    else if(itemNumberSub==3){
+      Randomwalk = 1;
+      BitX = 80;
+      BitRow = 16;
+    }    
+  
+ }
+ else if(valueHori == 0 && movedawayHori==1){
+    movedawayHori = 0;
+    movedawayVert = 0;
+    menuSelection1 = 1;
+    menuSelection2 = 0;
+    Buttons = 0;
+    Pendulum = 0;
+    resetScreen();
+    menuListUpdate();
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+}
+
+//                                         ____   _      __ __    ___ ______   ___    ___   ______  __ __ 
+//                                        |    \ | |    |  |  |  /  _]      | /   \  /   \ |      ||  |  |
+//                                        |  o  )| |    |  |  | /  [_|      ||     ||     ||      ||  |  |
+//                                        |     || |___ |  |  ||    _]_|  |_||  O  ||  O  ||_|  |_||  _  |
+//                                        |  O  ||     ||  :  ||   [_  |  |  |     ||     |  |  |  |  |  |
+//                                        |     ||     ||     ||     | |  |  |     ||     |  |  |  |  |  |
+//                                        |_____||_____| \__,_||_____| |__|   \___/  \___/   |__|  |__|__|
+//                                                                                                       
+while(BluetoothOn == 1){
+  if(BluetoothInit == 0){
+    BluetoothInit = 1;
+    Bincounter = 0;
+
+
+      tft.setCursor(20,50);
+      tft.setTextColor(MAGENTA);
+      tft.println("Bluetooth ON");
+      tft.setTextColor(WHITE);
+      Codeinput = 'R';
+  }
+   if(SerialBT.available()) {
+    Codeinput = SerialBT.read();
+    Serial.write(Codeinput);
+   }
+
+
+    digitalWrite(motorPin, LOW);
+    valueHori = analogRead(potHori);
+    
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Bitmap = 0;
+        BluetoothInit=0;
+        BluetoothOn = 0;
+           resetMenu();
+        menuListUpdate();
+ }
+     else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+
+ if(Codeinput=='D'){
+  Decimal = 1;
+ }
+ if(Codeinput=='W'){
+  Decimal = 0;
+ }
+
+
+
+   
+//                                              ____  _                   _____  ______ _   _ 
+//                                             |  _ \| |                 |  __ \|  ____| \ | |
+//                                             | |_) | |_   _  ___ ______| |__) | |__  |  \| |
+//                                             |  _ <| | | | |/ _ \______|  ___/|  __| | . ` |
+//                                             | |_) | | |_| |  __/      | |    | |____| |\  |
+//                                             |____/|_|\__,_|\___|      |_|    |______|_| \_|
+//                                                                                          
+   
+     if(Codeinput == 'P'){
+    Codeinput = 'R';
+
+
+
+for(unsigned int i=0;i<10;i++){
+  
+
+    
+  digitalWrite(motorPin, HIGH);
+
+   currentStateCLK = digitalRead(inputCLK);
+    
+  
+   if (currentStateCLK != previousStateCLK){ 
+     if (digitalRead(inputDT) != currentStateCLK) { 
+       counter --;
+
+
+       
+     } else {
+       counter ++;
+     }
+   } 
+   previousStateCLK = currentStateCLK; 
+
+
+    
+    abscounter = abs(counter);
+    abscounter = abscounter%5;
+    if(abscounter==0){
+      Serial.print(change);
+      Bitvalue = change;
+      NumberfunBlue();
+      if(change==0){
+        change =1;
+      }
+      else{
+        change=0;
+      }
+    }
+    else{
+      if(abscounter==1||abscounter==2){
+        Serial.print(1);
+        Bitvalue = 1;
+      NumberfunBlue();
+      }
+      else{
+        Serial.print(0);
+        Bitvalue = 0;
+      NumberfunBlue();
+      }
+      
+    }
+    delay(200);
+ 
+
+
+}//END FOR LOOP
+ 
+  }
+
+//                                                ____  _                
+//                                               |  _ \| |                
+//                                               | |_) | |_   _  ___ 
+//                                               |  _ <| | | | |/ _ \ 
+//                                               | |_) | | |_| |  __/        
+//                                               |____/|_|\__,_|\___|        
+//                                                                                               
+//                                                                              
+  
+  else if(Codeinput == 'S'){
+    Codeinput = 'R';
+    for(unsigned int i=0;i<10;i++){
+          Bitvalue = random(0,2);
+          NumberfunBlue();
+    }
+  }
+
+//                                            ____  _                   ______      _ _   
+//                                           |  _ \| |                 |  ____|    (_) |  
+//                                           | |_) | |_   _  ___ ______| |__  __  ___| |_ 
+//                                           |  _ <| | | | |/ _ \______|  __| \ \/ / | __|
+//                                           | |_) | | |_| |  __/      | |____ >  <| | |_ 
+//                                           |____/|_|\__,_|\___|      |______/_/\_\_|\__|
+//                                                                                        
+                                              
+  
+  else if(Codeinput == 'E'){
+    Codeinput = 'R';
+    resetMenu();
+          tft.setCursor(20,50);
+      tft.setTextColor(MAGENTA);
+      tft.println("Bluetooth OFF");
+      tft.setTextColor(WHITE);
+      delay(1000);
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Bitmap = 0;
+        BluetoothInit=0;
+        BluetoothOn = 0;
+           resetMenu();
+        menuListUpdate();
+  }
+
+  
+    
+  
+}//END BLUETOOTH WHILE
+
+
+//                                          ___                 _                      
+//                                         | _ \___ ___ _  _ __| |___   _ _ _  _ _ __  
+//                                         |  _(_-</ -_) || / _` / _ \ | ' \ || | '  \ 
+//                                         |_| /__/\___|\_,_\__,_\___/ |_||_\_,_|_|_|_|
+//                                                                                 
+
+while(Pseudo==1 && Numbers==1){
+
+  while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+          tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+  }
+       
+}
+
+
+         valueHori = analogRead(potHori);
+
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Numbers = 0;
+        Pseudo = 0;
+        info=1;
+           resetScreen();
+        menuListUpdate();
+ }
+    
+    else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+    
+
+while(digitalRead(ButtonOn)==HIGH){
+  for(unsigned int i = 0;i<10;i++){
+    Bitvalue = random(0,2);
+    Numberfun();
+    
+  }
+  delay(200);
+  
+} 
+}
+
+
+
+
+//                                            ___                 _       _    _ _   
+//                                           | _ \___ ___ _  _ __| |___  | |__(_) |_ 
+//                                           |  _(_-</ -_) || / _` / _ \ | '_ \ |  _|
+//                                           |_| /__/\___|\_,_\__,_\___/ |_.__/_|\__|
+//                                                                   
+//                                          
+while(Pseudo==1 && Bitmap==1){
+
+
+  while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+       
+}
+}
+    
+
+while(digitalRead(ButtonOn)==HIGH){
+  for(unsigned int i = 0;i<1280;i++){
+    Bitvalue = random(0,2);
+    Bitmapfun();    
+  }
+  delay(200);
+  BitX = 0;
+  BitRow  = 0;
+}
+
+        valueHori = analogRead(potHori);
+
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Bitmap = 0;
+        Pseudo = 0;
+        info=1;
+        resetScreen();
+        menuListUpdate();
+ }
+
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+
+
+}//END
+
+//                                            ___                 _                   _ _   
+//                                           | _ \___ ___ _  _ __| |___  __ __ ____ _| | |__
+//                                           |  _(_-</ -_) || / _` / _ \ \ V  V / _` | | / /
+//                                           |_| /__/\___|\_,_\__,_\___/  \_/\_/\__,_|_|_\_\
+//                                                                                         
+
+
+while(Pseudo==1 && Randomwalk==1){
+
+    while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+  }
+       
+}
+
+
+         valueHori = analogRead(potHori);
+
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Randomwalk = 0;
+        Pseudo = 0;
+        info=1;
+           resetScreen();
+        menuListUpdate();
+ }
+     else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      resetScreen();
+      BitX = 80;
+      BitRow = 16;
+      Bitcounter = 0;
+      Bitvalue = 0;
+      
+ }
+
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+    
+
+while(digitalRead(ButtonOn)==HIGH){
+    Bitvalue = random(0,2);
+    Randomwalkfun();    
+
+  
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//                                                         __  __                          
+//                                                        |__)|_ |\ |   _|_   |\ |/  \|\/| 
+//                                                        |   |__| \|    |    | \|\__/|  | 
+//        
+                                                                            
+while(Pendulum == 1 && Numbers == 1){
+
+while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+          tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+  }
+       
+}
+
+       valueHori = analogRead(potHori);
+
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Numbers = 0;
+        Pendulum = 0;
+        info=1;
+           resetScreen();
+        menuListUpdate();
+ }
+    
+    else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+    
+    digitalWrite(motorPin, LOW);
+
+    
+while(digitalRead(ButtonOn)==HIGH){
+  digitalWrite(motorPin, HIGH);
+
+
+
+   currentStateCLK = digitalRead(inputCLK);
+    
+  
+   if (currentStateCLK != previousStateCLK){ 
+     if (digitalRead(inputDT) != currentStateCLK) { 
+       counter --;
+
+
+       
+     } else {
+       counter ++;
+     }
+   } 
+   previousStateCLK = currentStateCLK; 
+
+
+  if(readValue == 1){
+    abscounter = abs(counter);
+    abscounter = abscounter%5;
+    if(abscounter==0){
+      Serial.print(change);
+      Bitvalue = change;
+      Numberfun();
+      if(change==0){
+        change =1;
+      }
+      else{
+        change=0;
+      }
+    }
+    else{
+      if(abscounter==1||abscounter==2){
+        Serial.print(1);
+        Bitvalue = 1;
+      Numberfun();
+      }
+      else{
+        Serial.print(0);
+        Bitvalue = 0;
+      Numberfun();
+      }
+      
+    }
+    readValue = 0;
+  }
+
+
+
+
+
+  
+}//END WHILE LOOP
+
+  
+}
+
+
+//                                                           __  __              __  ___ 
+//                                                          |__)|_ |\ |   _|_   |__)| |  
+//                                                          |   |__| \|    |    |__)| |  
+//   
+
+while(Pendulum == 1 && Bitmap == 1){
+
+while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("This prints a bitmap based ");
+      tft.println("on 1's and 0's from Pendulum");
+      tft.println("Move joystick left to go ");
+      tft.println("back to main menu");      
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+  }
+       
+}
+
+    digitalWrite(motorPin, LOW);
+    valueHori = analogRead(potHori);
+    
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Bitmap = 0;
+        info=1;
+        Pendulum = 0;
+        resetScreen();
+        menuListUpdate();
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+
+    
+while(digitalRead(ButtonOn)==HIGH){
+  digitalWrite(motorPin, HIGH);
+
+
+
+   currentStateCLK = digitalRead(inputCLK);
+    
+  
+   if (currentStateCLK != previousStateCLK){ 
+     if (digitalRead(inputDT) != currentStateCLK) { 
+       counter --;
+
+
+       
+     } else {
+       counter ++;
+     }
+   } 
+   previousStateCLK = currentStateCLK; 
+
+
+  if(readValue == 1){
+    abscounter = abs(counter);
+    abscounter = abscounter%5;
+    if(abscounter==0){
+      Serial.print(change);
+      Bitvalue = change;
+      Bitmapfun();
+      if(change==0){
+        change =1;
+      }
+      else{
+        change=0;
+      }
+    }
+    else{
+      if(abscounter==1||abscounter==2){
+        Serial.print(1);
+        Bitvalue = 1;
+      Bitmapfun();
+      }
+      else{
+        Serial.print(0);
+        Bitvalue = 0;
+      Bitmapfun();
+      }
+      
+    }
+    readValue = 0;
+  }
+
+
+}//END WHILE LOOP
+
+
+  
+}
+
+//                                                           __  __              __          
+//                                                          |__)|_ |\ |   _|_   |__) /\ |\ | 
+//                                                          |   |__| \|    |    | \ /--\| \| 
+//                                                                                           
+
+while(Pendulum == 1 && Randomwalk == 1){
+
+while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("This creates a random walk based ");
+      tft.println("on 1's and 0's from Pendulum");
+      tft.println("Move joystick left to go ");
+      tft.println("back to main menu");      
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+  }
+       
+}
+    valueHori = analogRead(potHori);
+    
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Randomwalk = 0;
+        Pendulum = 0;
+        info=1;
+           resetScreen();
+        menuListUpdate();
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+
+      digitalWrite(motorPin, LOW);
+
+    
+while(digitalRead(ButtonOn)==HIGH){
+  digitalWrite(motorPin, HIGH);
+
+
+
+   currentStateCLK = digitalRead(inputCLK);
+    
+  
+   if (currentStateCLK != previousStateCLK){ 
+     if (digitalRead(inputDT) != currentStateCLK) { 
+       counter --;
+
+
+       
+     } else {
+       counter ++;
+     }
+   } 
+   previousStateCLK = currentStateCLK; 
+
+
+  if(readValue == 1){
+    abscounter = abs(counter);
+    abscounter = abscounter%5;
+    if(abscounter==0){
+      Serial.print(change);
+      Bitvalue = change;
+      Randomwalkfun();
+      if(change==0){
+        change =1;
+      }
+      else{
+        change=0;
+      }
+    }
+    else{
+      if(abscounter==1||abscounter==2){
+        Serial.print(1);
+        Bitvalue = 1;
+      Randomwalkfun();
+      }
+      else{
+        Serial.print(0);
+        Bitvalue = 0;
+      Randomwalkfun();
+      }
+      
+    }
+    readValue = 0;
+  }
+
+
+
+
+
+  
+}//END WHILE LOOP
+  
+}
+
+//                                                           __     ___                    
+//                                                          |__)/  \ |  _|_   |\ |/  \|\/| 
+//                                                          |__)\__/ |   |    | \|\__/|  | 
+//                                                                                         
+
+
+while(Buttons == 1 && Numbers == 1){
+
+while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.println("Press the buttons in a random order to create");
+      tft.println("a random number");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+          tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+  }
+       
+}
+
+    if (StartOne == 0){
+    AssignBits();
+    StartOne = 1;
+  }
+  while(StartOne==1){
+
+     valueHori = analogRead(potHori);
+
+        if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        StartOne=0;
+        Numbers = 0;
+        Buttons = 0;
+        info=1;
+        resetScreen();
+        menuListUpdate();
+       }
+       
+       else if(valueHori < 2000 && valueHori > 1700){
+       movedawayHori = 1;
+       }
+       
+      else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+    
+
+
+  if(digitalRead(button1) == HIGH){
+    delay(200);
+    Serial.print(value1);
+    Bitvalue = value1;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button2) == HIGH){
+    delay(200);
+    Serial.print(value2);
+    Bitvalue = value2;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button3) == HIGH){
+    delay(200);
+    Serial.print(value3);
+    Bitvalue = value3;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button4) == HIGH){
+    delay(200);
+    Serial.print(value4);
+    Bitvalue = value4;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button5) == HIGH){
+    delay(200);
+    Serial.print(value5);
+    Bitvalue = value5;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button6) == HIGH){
+    delay(200);
+    Serial.print(value6);
+    Bitvalue = value6;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button7) == HIGH){
+    delay(200);
+    Serial.print(value7);
+    Bitvalue = value7;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button8) == HIGH){
+    delay(200);
+    Serial.print(value8);
+    Bitvalue = value8;
+    Numberfun();
+    AssignBits();
+  }
+    if(digitalRead(button9) == HIGH){
+    delay(200);
+    Serial.print(value9);
+    Bitvalue = value9;
+    Numberfun();
+    AssignBits();
+  }
+
+
+    
+  }
+
+  
+}
+
+//                                                           __     ___        __  ___ 
+//                                                          |__)/  \ |  _|_   |__)| |  
+//                                                          |__)\__/ |   |    |__)| |  
+//                                                                                     
+
+
+while(Buttons == 1 && Bitmap == 1){
+
+while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("This prints a bitmap based ");
+      tft.println("on 1's and 0's from Pendulum");
+      tft.println("Move joystick left to go ");
+      tft.println("back to main menu");      
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+        AssignBits();
+    StartOne = 1;
+    resetScreen();
+  }
+       
+}
+
+
+  while(StartOne==1){
+    
+  valueHori = analogRead(potHori);
+  
+  if(valueHori == 0 && movedawayHori==1){
+      movedawayHori = 0;
+      movedawayVert = 0;
+      menuSelection1 = 1;
+      menuSelection2 = 0;
+      StartOne =0;
+      Buttons = 0;
+      info=1;
+      Bitmap = 0;
+         resetScreen();
+      menuListUpdate();
+ }
+     else if(valueHori < 2000 && valueHori > 1700){
+     movedawayHori = 1;
+ }
+
+  if(digitalRead(button1) == HIGH){
+    delay(200);
+    Serial.print(value1);
+    Bitvalue = value1;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button2) == HIGH){
+    delay(200);
+    Serial.print(value2);
+    Bitvalue = value2;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button3) == HIGH){
+    delay(200);
+    Serial.print(value3);
+    Bitvalue = value3;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button4) == HIGH){
+    delay(200);
+    Serial.print(value4);
+    Bitvalue = value4;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button5) == HIGH){
+    delay(200);
+    Serial.print(value5);
+    Bitvalue = value5;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button6) == HIGH){
+    delay(200);
+    Serial.print(value6);
+    Bitvalue = value6;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button7) == HIGH){
+    delay(200);
+    Serial.print(value7);
+    Bitvalue = value7;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button8) == HIGH){
+    delay(200);
+    Serial.print(value8);
+    Bitvalue = value8;
+    Bitmapfun();
+    AssignBits();
+  }
+    if(digitalRead(button9) == HIGH){
+    delay(200);
+    Serial.print(value9);
+    Bitvalue = value9;
+    Bitmapfun();
+    AssignBits();
+  }
+
+
+    
+  }
+
+  
+}
+
+//                                                           __     ___        __          
+//                                                          |__)/  \ |  _|_   |__) /\ |\ | 
+//                                                          |__)\__/ |   |    | \ /--\| \| 
+//                                                                                        
+
+while(Buttons == 1 && Randomwalk == 1){
+
+
+while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("This creates a random walk based ");
+      tft.println("on 1's and 0's from buttons");
+      tft.println("Move joystick left to go ");
+      tft.println("back to main menu");      
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+  }
+       
+}
+    // put your main code here, to run repeatedly:
+  if (StartOne == 0){
+    AssignBits();
+    StartOne = 1;
+  }
+  while(StartOne==1){
+
+
+     valueHori = analogRead(potHori);
+    
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Buttons = 0;
+        info=1;
+        StartOne = 0;
+        Randomwalk = 0;
+        resetScreen();
+        menuListUpdate();
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+    
+
+  if(digitalRead(button1) == HIGH){
+    delay(200);
+    Serial.print(value1);
+    Bitvalue = value1;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button2) == HIGH){
+    delay(200);
+    Serial.print(value2);
+    Bitvalue = value2;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button3) == HIGH){
+    delay(200);
+    Serial.print(value3);
+    Bitvalue = value3;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button4) == HIGH){
+    delay(200);
+    Serial.print(value4);
+    Bitvalue = value4;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button5) == HIGH){
+    delay(200);
+    Serial.print(value5);
+    Bitvalue = value5;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button6) == HIGH){
+    delay(200);
+    Serial.print(value6);
+    Bitvalue = value6;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button7) == HIGH){
+    delay(200);
+    Serial.print(value7);
+    Bitvalue = value7;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button8) == HIGH){
+    delay(200);
+    Serial.print(value8);
+    Bitvalue = value8;
+    Randomwalkfun();
+    AssignBits();
+  }
+    if(digitalRead(button9) == HIGH){
+    delay(200);
+    Serial.print(value9);
+    Bitvalue = value9;
+    Randomwalkfun();
+    AssignBits();
+  }
+
+ }
+
+}
+
+
+
+
+while(ADCmenu==1){
+  
+   valueVert = analogRead(potVert);
+  valueHori = analogRead(potHori);
+ if(valueVert == 4095 && movedawayVert ==1){
+  if(itemNumberSub<4){
+    itemNumberSub += 1;
+    movedawayVert = 0;
+    resetMenu();
+    ADCmenufun();
+  }  
+ }
+ else if(valueVert == 0 && movedawayVert ==1){
+  if(itemNumberSub>1){
+    itemNumberSub -= 1;
+    movedawayVert = 0;
+    resetMenu();
+    ADCmenufun();
+   
+  }
+ }
+ else if(valueVert < 2000 && valueVert > 1700){
+  movedawayVert = 1;
+ }
+
+ if(valueHori == 4095 && movedawayHori==1){
+    movedawayHori = 0;
+    movedawayVert = 0;
+    menuSelection1 = 0;
+    menuSelection2 = 0;
+    ADCmenu = 0;
+    resetScreen();
+        
+    if(itemNumberSub==1){
+      ADC = 1;
+      Numbers = 1;
+      
+    }
+    else if(itemNumberSub==2){
+      ADC = 1;
+      Bitmap = 1;
+    }
+    else if(itemNumberSub==3){
+      ADC = 1;
+      Randomwalk = 1;
+    }   
+    else if(itemNumberSub==4){
+      ADC = 1;
+      ADCgraph = 1;
+    }  
+  
+ }
+ else if(valueHori == 0 && movedawayHori==1){
+    movedawayHori = 0;
+    movedawayVert = 0;
+    menuSelection1 = 1;
+    menuSelection2 = 0;
+    ADCmenu = 0;
+       resetScreen();
+    menuListUpdate();
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+
+}
+
+
+
+while(ADC==1 && Numbers==1){
+
+  while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.println("Press the buttons in a random order to create");
+      tft.println("a random number");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+          tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+  }
+       
+}
+
+
+     valueHori = analogRead(potHori);
+
+        if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        StartOne=0;
+        Numbers = 0;
+        ADC = 0;
+        info=1;
+        resetScreen();
+        menuListUpdate();
+       }
+       
+       else if(valueHori < 2000 && valueHori > 1700){
+       movedawayHori = 1;
+       }
+       
+      else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      tft.setCursor(0,0);
+      tft.fillRect(0, 0, 160, 30, 0x39E7);
+      tft.setCursor(0,0);
+      tft.setCursor(5,5);
+      tft.setTextScale(1);
+      if(Decimal==1){
+        Decimal = 0;
+        tft.setTextColor(0xA514); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xFFFF); 
+        tft.print("Whole");
+      }
+      else{
+        Decimal = 1;
+        tft.setTextColor(0xFFFF); 
+        tft.print("Decimal");
+        tft.print("  ");
+        tft.setTextColor(0xA514); 
+        tft.print("Whole");
+        tft.setTextColor(0xFFFF); 
+      }
+ }
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+
+
+  
+  while(digitalRead(ButtonOn)==HIGH){
+  for(unsigned int i = 0;i<10;i++){
+    currentValue = analogRead(ADCNoise);
+     if(currentValue < previousValue){
+        prevBit = 0;
+        previousValue = currentValue;
+        Bitvalue = 0;
+        Numberfun();
+      }
+      else if(currentValue > previousValue){
+        prevBit = 1;
+        previousValue = currentValue;
+        Bitvalue = 1;
+        Numberfun();
+      }
+      else{
+        previousValue = currentValue;
+        Bitvalue = prevBit;
+        Numberfun();
+      }
+    
+  }
+  delay(200);
+  
+} 
+}
+
+while(ADC==1 && Bitmap==1){
+
+    while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+       
+}
+}
+
+
+         valueHori = analogRead(potHori);
+
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Bitmap = 0;
+        ADC = 0;
+        info=1;
+           resetScreen();
+        menuListUpdate();
+ }
+
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+    
+
+while(digitalRead(ButtonOn)==HIGH){
+  for(unsigned int i = 0;i<1280;i++){
+    currentValue = analogRead(ADCNoise);
+     if(currentValue < previousValue){
+        prevBit = 0;
+        previousValue = currentValue;
+        Bitvalue = 0;
+        Bitmapfun();
+      }
+      else if(currentValue > previousValue){
+        prevBit = 1;
+        previousValue = currentValue;
+        Bitvalue = 1;
+        Bitmapfun();
+      }
+      else{
+        previousValue = currentValue;
+        Bitvalue = prevBit;
+        Bitmapfun();
+      }  
+  }
+  delay(200);
+  BitX = 0;
+  BitRow  = 0;
+  
+}
+
+
+
+  
+}
+
+while(ADC==1 && Randomwalk==1){
+  
+          while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+  }
+       
+}
+
+
+         valueHori = analogRead(potHori);
+
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        Randomwalk = 0;
+        ADC = 0;
+        info=1;
+           resetScreen();
+        menuListUpdate();
+ }
+     else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      resetScreen();
+      BitX = 80;
+      BitRow = 16;
+      Bitcounter = 0;
+      Bitvalue = 0;
+      
+ }
+
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+    
+
+while(digitalRead(ButtonOn)==HIGH){
+        currentValue = analogRead(ADCNoise);
+     if(currentValue < previousValue){
+        prevBit = 0;
+        previousValue = currentValue;
+        Bitvalue = 0;
+        Randomwalkfun();
+      }
+      else if(currentValue > previousValue){
+        prevBit = 1;
+        previousValue = currentValue;
+        Bitvalue = 1;
+        Randomwalkfun();
+      }
+      else{
+        previousValue = currentValue;
+        Bitvalue = prevBit;
+        Randomwalkfun();
+      }  
+
+  
+}
+
+}
+
+while(ADC==1 && ADCgraph==1){
+
+            while(info){
+
+      tft.setCursor(0,0);
+      tft.setTextColor(MAGENTA);
+      tft.println("Instructions");
+      tft.setTextColor(WHITE);
+      tft.setFont(&arial10);
+      tft.println("Move joystick right to change ");
+      tft.println("between decimal or whole ,move left for home.");
+      tft.print("Press");
+      tft.setTextColor(GREEN);
+      tft.print(" Green ");
+      tft.setTextColor(WHITE);
+      tft.println("button for power. ");
+      tft.setTextColor(RED);
+      tft.print("Press red button to continue");
+       tft.setFont(&orbitron14);
+
+  if(digitalRead(infoButton)==HIGH){
+    info=0;
+    tft.setFont(&orbitron14);
+    resetScreen();
+  }
+       
+}
+
+
+
+
+
+ graphValue = analogRead(ADCNoise);
+ graphhold = (128*(graphValue-graphMove)+1)/graphlong;
+  //Serial.print(graphhold);
+  //Serial.print("    ");
+  
+ graphValue = (signed int)graphhold;
+// Serial.print(graphValue);
+//Serial.print("   ");
+//Serial.println(graphlong);
+  if(graphValue>120 &&graphValue<100000){
+  tft.setCursor(0,0);
+  tft.setTextColor(GREEN);
+  tft.print("UP");
+ }
+ else if(graphValue>100000){
+  tft.setCursor(0,0);
+    tft.setTextColor(RED);
+  tft.print("DOWN");
+ }
+ else{
+  tft.fillRect(0,0,70,30,0x39E7);
+  
+ }
+// Serial.println(graphValue);
+ graphfun();
+ delay(10);
+
+ if(digitalRead(ButtonUp) == HIGH){
+    graphMove+=1;
+ }
+ if(digitalRead(ButtonDown) == HIGH){
+  graphMove-=1;
+ }
+  if(digitalRead(ButtonLarge) == HIGH){
+  graphlong+=1;
+ }
+  if(digitalRead(ButtonSmall) == HIGH && graphlong>20){
+  graphlong-=1;
+ }
+
+
+
+         valueHori = analogRead(potHori);
+
+    if(valueHori == 0 && movedawayHori==1){
+        movedawayHori = 0;
+        movedawayVert = 0;
+        resetScreen();
+        menuSelection1 = 1;
+        menuSelection2 = 0;
+        ADCgraph = 0;
+        ADC = 0;
+        info=1;
+        resetScreen();
+        menuListUpdate();
+ }
+     else if(valueHori == 4095 && movedawayHori==1){
+      movedawayHori = 0;
+      resetScreen();
+      BitX = 80;
+      BitRow = 16;
+      Bitcounter = 0;
+      Bitvalue = 0;
+      
+ }
+
+ else if(valueHori < 2000 && valueHori > 1700){
+ movedawayHori = 1;
+ }
+
+
+
+
+
+  
+}
+
+
+
+
+
+
+
+}//teraEND LOOP
+
+
+
+
+
+
+
+
+
+
+
+
+//                                     _____  __ __  ____     __ ______  ____  ___   ____   _____
+//                                    |     ||  |  ||    \   /  ]      ||    |/   \ |    \ / ___/
+//                                    |   __||  |  ||  _  | /  /|      | |  ||     ||  _  (   \_ 
+//                                    |  |_  |  |  ||  |  |/  / |_|  |_| |  ||  O  ||  |  |\__  |
+//                                    |   _] |  :  ||  |  /   \_  |  |   |  ||     ||  |  |/  \ |
+//                                    |  |   |     ||  |  \     | |  |   |  ||     ||  |  |\    |
+//                                    |__|    \__,_||__|__|\____| |__|  |____|\___/ |__|__| \___|
+//                                                                                             
+
+
+
+//FUNCTIONS FOR CODE
+
+void resetScreen(){
+  tft.clearScreen();
+  tft.fillScreen(0x39E7);
+  tft.setCursor(0,0);
+}
+
+void resetMenu(){
+    tft.setCursor(0,0);
+    tft.fillRect(0, 32, 160, 75, 0x39E7);
+    tft.setCursor(0,0);
+
+}
+
+
+void AssignBits (){
+value1 = random(0, 2);
+value2 = random(0, 2);
+value3 = random(0, 2);
+value4 = random(0, 2);
+value5 = random(0, 2);
+value6 = random(0, 2);
+value7 = random(0, 2);
+value8 = random(0, 2);
+value9 = random(0, 2);  
+}
+
+
+void menuListUpdate(){
+  tft.setTextScale(1);
+  tft.setTextColor(0x035F);
+  tft.println("Select");
+  tft.println("Method:");
+  tft.setTextColor(0xA514);
+  tft.setTextScale(1);
+  
+  if(itemNumber == 1){
+  tft.setTextColor(0xFFFF); 
+  tft.println("1-Pendulum");  
+  tft.setTextColor(0xA514); 
+  tft.println("2. Buttons"); 
+  tft.println("3. Pseudo"); 
+  tft.println("4. Bluetooth"); 
+  tft.println("5. ADC"); 
+  }
+  else if(itemNumber == 2){
+  tft.println("1. Pendulum");
+  tft.setTextColor(0xFFFF); 
+  tft.println("2-Buttons");   
+  tft.setTextColor(0xA514);
+  tft.println("3. Pseudo"); 
+  tft.println("4. Bluetooth");
+  tft.println("5. ADC");  
+  }
+  else if(itemNumber == 3){
+  tft.println("1. Pendulum");
+  tft.println("2. Buttons");  
+  tft.setTextColor(0xFFFF); 
+  tft.println("3-Pseudo");   
+  tft.setTextColor(0xA514);
+  tft.println("4. Bluetooth"); 
+  tft.println("5. ADC");  
+  }
+    else if(itemNumber == 4){
+  tft.println("1. Pendulum");
+  tft.println("2. Buttons");  
+  tft.println("3. Pseudo");   
+  tft.setTextColor(0xFFFF); 
+  tft.println("4-Bluetooth");  
+  tft.setTextColor(0xA514);
+  tft.println("5. ADC"); 
+  }
+  else if(itemNumber == 5){
+  tft.println("1. Pendulum");
+  tft.println("2. Buttons");  
+  tft.println("3. Pseudo");   
+  tft.println("4. Bluetooth"); 
+  tft.setTextColor(0xFFFF);  
+  tft.println("5. ADC"); 
+  tft.setTextColor(0xA514);
+  }
+ 
+}
+
+
+void menuSub(){
+
+tft.setTextColor(0x035F);
+tft.println("Select Method");
+tft.println("Item:");
+tft.setTextColor(0xA514);
+
+  if(itemNumberSub == 1){
+tft.setTextColor(0xFFFF); 
+tft.println("1-Print Numbers");  
+tft.setTextColor(0xA514); 
+tft.println("2.Bitmap"); 
+tft.println("3.Randomwalk"); 
+}
+
+else if(itemNumberSub == 2){
+tft.println("1. Print Numbers");
+tft.setTextColor(0xFFFF); 
+tft.println("2-Bitmap");   
+tft.setTextColor(0xA514); 
+tft.println("3.Randomwalk");   
+}
+else if(itemNumberSub == 3){
+  tft.println("1. Print Numbers");
+tft.println("2-Bitmap");   
+tft.setTextColor(0xFFFF); 
+tft.println("3.Randomwalk");  
+tft.setTextColor(0xA514);  
+}
+
+}
+
+
+void Bitmapfun(){
+  if(BitX==160 && BitRow<32){
+    BitX=0;
+    BitRow+=1;
+  }
+  else if(BitX==160 && BitRow==32){
+    BitX=0;
+    BitRow=0;
+  }
+  if(BitX!=160&&BitRow<32){
+    if(Bitvalue == 0){
+      tft.fillRect(BitX, 4*BitRow, 4, 4,DARK_GREY);
+    }
+    else{
+      tft.fillRect(BitX, 4*BitRow, 4, 4,WHITE);
+    }
+    BitX+=4;
+ }     
+
+
+}//END FUN
+  
+
+
+void Randomwalkfun(){
+
+if(Bitcounter<1){
+  Bitcounter+=1;
+  PrevBitvalue = Bitvalue;
+}
+else{
+
+Bitcounter = 0;
+
+if(PrevBitvalue==0 && Bitvalue==0){
+      tft.drawFastHLine(BitX, 4*BitRow, 5, CYAN);
+      BitX+=4;
+}
+else if(PrevBitvalue==0 && Bitvalue==1){
+      tft.drawFastHLine(BitX-4, 4*BitRow, 5, CYAN);
+      BitX-=4;
+}
+else if(PrevBitvalue==1 && Bitvalue==0){
+      tft.drawFastVLine(BitX, 4*(BitRow-1), 5, CYAN);
+      BitRow-=1;
+}
+else{
+     tft.drawFastVLine(BitX, 4*BitRow, 5, CYAN);
+     BitRow+=1;
+} 
+}
+}
+
+void Numberfun(){
+
+  if(Bincounter<9){
+    if(Bitvalue==0){
+      binary[Bincounter] = '0';
+    }
+    else{
+      binary[Bincounter] = '1';
+    }
+        Bincounter+=1;
+        tft.fillRect(10,100,Bincounter*14,10,0xFFFF);
+  }
+  else{
+    Bincounter = 0;
+    Binnumber = strtol(binary,&pEnd,2);
+      resetMenu();
+      tft.setCursor(30,50);
+      tft.setTextScale(2);
+      if(Binnumber<1001){
+        if(Decimal==1){
+        tft.print("0.");        
+        }
+        tft.print(Binnumber);
+      }
+      else{
+        tft.print("NAN");
+      }
+
+      tft.setTextScale(1);
+  }
+  
+}
+
+
+void NumberfunBlue(){
+
+  if(Bincounter<9){
+    if(Bitvalue==0){
+      binary[Bincounter] = '0';
+    }
+    else{
+      binary[Bincounter] = '1';
+    }
+        Bincounter+=1;
+        tft.fillRect(10,100,Bincounter*14,10,0xFFFF);
+  }
+  else{
+    Bincounter = 0;
+    tft.fillRect(10,100,9*14,10,0x39E7);
+    Binnumber = strtol(binary,&pEnd,2);
+     // resetMenu();
+     // tft.setCursor(30,50);
+     // tft.setTextScale(2);
+      if(Binnumber<1001){
+        //tft.print(Binnumber);
+        SerialBT.println("Your random number is:");
+                if(Decimal==1){
+       // tft.print("0.");
+        SerialBT.print("0.");        
+        }
+        SerialBT.println(Binnumber);
+        
+      }
+      else{
+        //tft.print("NAN");
+        //SerialBT.write("NAN");
+      }
+
+  }
+  
+}
+
+
+void ADCmenufun(){
+
+  tft.setTextColor(0x035F);
+tft.println("Select Method");
+tft.println("Item:");
+tft.setTextColor(0xA514);
+
+  if(itemNumberSub == 1){
+tft.setTextColor(0xFFFF); 
+tft.println("1-Print Numbers");  
+tft.setTextColor(0xA514); 
+tft.println("2.Bitmap"); 
+tft.println("3.Randomwalk"); 
+tft.println("4.Graph");  
+}
+
+else if(itemNumberSub == 2){
+tft.println("1. Print Numbers");
+tft.setTextColor(0xFFFF); 
+tft.println("2-Bitmap");   
+tft.setTextColor(0xA514); 
+tft.println("3.Randomwalk");  
+tft.println("4.Graph");   
+}
+else if(itemNumberSub == 3){
+  tft.println("1. Print Numbers");
+tft.println("2-Bitmap");   
+tft.setTextColor(0xFFFF); 
+tft.println("3.Randomwalk");  
+tft.setTextColor(0xA514);  
+tft.println("4.Graph");  
+}
+else if(itemNumberSub == 4){
+  tft.println("1. Print Numbers");
+tft.println("2-Bitmap");   
+tft.println("3.Randomwalk");
+tft.setTextColor(0xFFFF);    
+tft.println("4-Graph");  
+tft.setTextColor(0xA514); 
+}
+
+
+  
+}
+
+
+void graphfun(){
+  for(unsigned int i = 0;i<160;i++){
+    if(i!= 159){
+     // Serial.println(i);
+          tft.drawPixel(i,graph[i],0x39E7);
+    graph[i] = graph[i+1];
+    tft.drawPixel(i,graph[i],0xFFFF);
+    }
+    else{
+      graph[i] = graphValue ;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//void menuList2(){
+//  tft.setTextColor(0x035F);
+//  tft.println("Select");
+//  tft.println("Values:");
+//  tft.setTextColor(0xA514);
+//
+//    if(itemNumberSub == 1){
+//  tft.setTextColor(0xFFFF); 
+//  tft.println("1-Minimum");  
+//  tft.setTextColor(0xA514); 
+//  tft.println("2.Maximum"); 
+//  }
+//  
+//  else if(itemNumberSub == 2){
+//  tft.println("1. Minimum");
+//  tft.setTextColor(0xFFFF); 
+//  tft.println("2-Maximum");   
+//  tft.setTextColor(0xA514); 
+//  }
+//}
+//
+//void menuList3(){
+//  tft.setTextColor(0x035F);
+//  tft.println("Select");
+//  tft.println("Amount:");
+//  tft.setTextColor(0xA514);
+//  if(minValue<0){
+//    tft.setCursor(10,50);
+//  }
+//  else{
+//  tft.setCursor(20,50);
+//  }
+//  tft.setTextScale(2);
+//  tft.println(amountValue);
+//  tft.setTextScale(1);
+//}
+//
+//void menuList4(){
+//  tft.setTextColor(0x035F);
+//  tft.println("Select");
+//  tft.println("Method:");
+//  tft.setTextColor(0xA514);
+//  
+//  if(itemNumberSub == 1){
+//  tft.setTextColor(0xFFFF); 
+//  tft.println("1-Joystick");  
+//  tft.setTextColor(0xA514); 
+//  tft.println("2.Electrical"); 
+//  tft.println("3.Mechanical"); 
+//  tft.println("4.Pseudo");
+//  }
+//  else if(itemNumberSub == 2){
+//  tft.println("1. Joystick");
+//  tft.setTextColor(0xFFFF); 
+//  tft.println("2-Electrical");   
+//  tft.setTextColor(0xA514); 
+//  tft.println("3.Mechanical"); 
+//  tft.println("4.Pseudo");
+//  }
+//  else if(itemNumberSub == 3){
+//  tft.println("1. Joystick"); 
+//  tft.println("2.Electrical"); 
+//  tft.setTextColor(0xFFFF); 
+//  tft.println("3-Mechanical");   
+//  tft.setTextColor(0xA514);  
+//  tft.println("4.Pseudo");     
+//  }
+//  else if(itemNumberSub == 4){
+//  tft.println("1. Joystick");  
+//  tft.println("2.Electrical");
+//  tft.println("3.Mechanical");
+//  tft.setTextColor(0xFFFF); 
+//  tft.println("4-Pseudo");
+//  tft.setTextColor(0xA514); 
+//  
+//  }
+//  
+//}
+//
+
+//void minMenu(){
+//  tft.setTextColor(0x035F);
+//  tft.println("Minimum");
+//  tft.println("Value:");
+//  tft.setTextColor(0xA514);
+//  if(minValue<0){
+//    tft.setCursor(10,50);
+//  }
+//  else{
+//  tft.setCursor(20,50);
+//  }
+//  tft.setTextScale(2);
+//  tft.println(minValue);
+//    tft.setTextScale(1);
+//}
+//
+//
+//void maxMenu(){
+//  tft.setTextColor(0x035F);
+//  tft.println("Maximum");
+//  tft.println("Value:");
+//  tft.setTextColor(0xA514);
+//    if(minValue<0){
+//    tft.setCursor(10,50);
+//  }
+//  else{
+//  tft.setCursor(20,50);
+//  }
+//  tft.setTextScale(2);
+//  tft.println(maxValue);
+//  tft.setTextScale(1);
+//}
